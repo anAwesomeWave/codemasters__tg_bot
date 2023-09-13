@@ -73,7 +73,41 @@ def add_employee(*args):
     return 0
     # можно передать словарь например, и в insert (передать *d.keys())
 
+@db_decorator
+def get_user_by_id(*args):
+    try:
+        cur, con, emp_id = args
+    except ValueError:
+        logger.error(f"Cannot add user, not enough args {args}", exc_info=1)
+        return None
+    try:
+        cur.execute("SELECT * FROM empls WHERE id=?", (emp_id,))
+    except sqlite3.OperationalError as e:
+        logger.error(f'Cannot retrieve user. {e}', exc_info=1)
+        return None
+    return cur.fetchone()
+
+
+@db_decorator
+def updated_field(*args):
+    ''' изменение поля
+        прнимает id, и field -> {k: updated_val}
+    '''
+    try:
+        cur, con, emp_id, field = args
+    except ValueError:
+        logger.error(f"Cannot add user, not enough args {args}", exc_info=1)
+        return None
+    cur.execute("UPDATE empls SET ?=?", field.items()[0])
+
+    return 0
+@db_decorator
+def find_employer_by_fields(*args):
+    ...
+
 
 if __name__ == '__main__':
     # create_db()
-    add_employee({'first_name': 'tOm', 'last_name': 'Zubov', 'job_pos': 'BOSS', 'project': 'kaif'})
+    # add_employee({'first_name': 'tOm', 'last_name': 'Zubov', 'job_pos': 'BOSS',
+    #               'project': 'kaif'})
+    print(get_user_by_id(1))
