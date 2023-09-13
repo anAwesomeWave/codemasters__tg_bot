@@ -1,4 +1,4 @@
-from core import bot, db
+from core import bot
 
 
 def run_app():
@@ -6,3 +6,6 @@ def run_app():
 
     # run bot
     bot.serve()
+
+
+run_app()

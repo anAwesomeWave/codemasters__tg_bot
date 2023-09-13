@@ -2,7 +2,7 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 
-from settings import BASE_DIR
+from core.settings import BASE_DIR
 
 LOG_DIR = BASE_DIR + '/logs/'
 
