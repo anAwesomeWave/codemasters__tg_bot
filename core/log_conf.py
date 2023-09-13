@@ -4,7 +4,7 @@ from logging.handlers import RotatingFileHandler
 
 from settings import BASE_DIR
 
-LOG_DIR = BASE_DIR + 'logs/'
+LOG_DIR = BASE_DIR + '/logs/'
 
 """Модуль для настройки логгера проекта."""
 
