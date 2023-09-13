@@ -10,6 +10,7 @@ logger = create_logger(__name__, 'bot.log')
 
 """Модуль для управления ботом."""
 
+
 def prepare_bot():
     try:
         updater = Updater(token=os.getenv('API_KEY'))
@@ -23,8 +24,13 @@ def prepare_bot():
 
 
 def serve():
-    updater.start_polling()
-    updater.idle()
+    try:
+        updater = prepare_bot()
+        updater.start_polling()
+        updater.idle()
+    except Exception as e:
+        logger.error(e)
+
 
 
 if __name__ == '__main__':
@@ -33,7 +39,6 @@ if __name__ == '__main__':
     # )
     # serve()
 
-    logger.debug('test')
     try:
         updater = prepare_bot()
     except Exception as e:
