@@ -8,6 +8,7 @@ from log_conf import create_logger
 load_dotenv()
 logger = create_logger(__name__, 'bot.log')
 
+"""Модуль для управления ботом."""
 
 def prepare_bot():
     try:

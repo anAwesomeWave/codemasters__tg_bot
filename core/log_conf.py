@@ -6,6 +6,8 @@ from settings import BASE_DIR
 
 LOG_DIR = BASE_DIR + 'logs/'
 
+"""Модуль для настройки логгера проекта."""
+
 
 def create_logger(name, filename):
     logger = logging.getLogger(name)
