@@ -17,7 +17,7 @@ def create_logger(name, filename):
         LOG_DIR + filename, maxBytes=10000, backupCount=1
     )
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        '%(asctime)s - %(name)s [%(funcName)s %(lineno)d] - %(levelname)s - %(message)s'
     )
     handler.setFormatter(formatter)
     logger.addHandler(handler)
