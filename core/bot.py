@@ -4,7 +4,7 @@ from telegram.ext import (Updater,
                           Filters,
                           MessageHandler,
                           CommandHandler,
-                          ConversationHandler
+                          ConversationHandler,
                           )
 from telegram import ReplyKeyboardMarkup
 from telegram.error import TelegramError
@@ -20,7 +20,7 @@ logger = create_logger(__name__, 'bot.log')
 """Модуль для управления ботом."""
 
 WORKER_DATA = range(1)
-ENTER_ID, UPDATE_DATA = range(2)
+ENTER_ID, UPDATE_DATA, ENTER_NEW_TEXT, ENTER_NEW_PHOTO = range(4)
 NUMBER_OF_REQUIRED_FIELDS = 4
 ID = None
 
@@ -61,32 +61,33 @@ def update_enter_id(update, context):
         update.message.reply_text('К сожалению, пользователь не найден. Убедитесь, что вы вводите Корректный идентификатор(число).')
         return ConversationHandler.END
     update.message.reply_text('Пользователь найден!')
-
-    reply_keyboard = [['/first_name', '/middle_name', '/last_name', '/avatar', '/job_position', '/project']]
+    text_update_col = [x for x in ALL_DB_COLUMNS if x not in ('ID', 'avatar')]
+    reply_keyboard = [['/update ' + x for x in
+                       text_update_col] + ['/update_avatar',]]
 
     employee_card = ''
+    avatar_detected = False
     for i in range(len(found_employee)):
         col_name = ALL_DB_COLUMNS[i].upper()
         val = found_employee[i]
         if col_name == 'AVATAR':
+            if val is not None:
+                avatar_detected = True
             continue
         if val is None:
             val = 'Пусто'
         employee_card += f'{col_name} - {val}\n'
-    update.message.reply_text(employee_card, reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
+    if avatar_detected:
+        update.message.reply_photo(caption=employee_card, reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
+    else:
+        update.message.reply_text(employee_card, reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
     return UPDATE_DATA
 
-def update_first_name():
-    return ConversationHandler.END
-def update_middle_name():
-    return ConversationHandler.END
-def update_last_name():
+def update_text_field(update, _):
+    print("ЗДЕЕЕСЬ")
+    print(update.message.text)
     return ConversationHandler.END
 def update_avatar():
-    return ConversationHandler.END
-def update_project():
-    return ConversationHandler.END
-def update_job_pos():
     return ConversationHandler.END
 
 def prepare_bot():
@@ -112,13 +113,16 @@ def prepare_bot():
         states={
             ENTER_ID: [MessageHandler(Filters.text, update_enter_id)],
             UPDATE_DATA: [
-                CommandHandler('first_name', update_first_name),
-                CommandHandler('middle_name', update_middle_name),
-                CommandHandler('last_name', update_last_name),
-                CommandHandler('avatar', update_avatar),
-                CommandHandler('project', update_project),
-                CommandHandler('job_position', update_job_pos),
-            ]
+                CommandHandler('update', update_text_field),
+                CommandHandler('update_avatar', update_avatar),
+            ],
+            # ENTER_NEW_TEXT: [
+            #     MessageHandler(Filters.text, update_with_val)
+            # ],
+            # ENTER_NEW_PHOTO: [
+            #     MessageHandler(Filters.photo, update_with_avatar)
+            # ]
+
         },
         fallbacks=[CommandHandler('cancel', cancel_conv)]
     )
