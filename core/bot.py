@@ -88,7 +88,8 @@ def update_enter_id(update, context):
 
     employee_card, avatar_detected = employee_card_message(found_employee)
     if avatar_detected:
-        update.message.reply_photo(caption=employee_card, reply_markup=InlineKeyboardMarkup(reply_keyboard))
+        photo = BufferedReader(BytesIO(found_employee[-2]))
+        context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo, caption=employee_card)
     else:
         update.message.reply_text(employee_card, reply_markup=InlineKeyboardMarkup(reply_keyboard))
     return ConversationHandler.END
