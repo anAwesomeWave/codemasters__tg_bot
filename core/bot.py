@@ -1,13 +1,14 @@
 import os
 
-from telegram.ext import (Updater,
-                          Filters,
-                          MessageHandler,
-                          CommandHandler,
-                          ConversationHandler,
-                          )
-from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.error import TelegramError
+from telegram.ext import (
+    Updater,
+    Filters,
+    MessageHandler,
+    CommandHandler,
+    ConversationHandler,
+    CallbackQueryHandler,
+)
+from telegram import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from dotenv import load_dotenv
 
 from core.log_conf import create_logger
@@ -22,9 +23,10 @@ logger = create_logger(__name__, 'bot.log')
 
 WORKER_DATA = range(1)
 ENTER_ID, UPDATE_FIELD, UPDATE_VAL = range(3)
+
+UPDATE_END_VAL = range(1)
+
 NUMBER_OF_REQUIRED_FIELDS = 4
-ID = None
-FIELD_TO_UPDATE = None
 
 default_markup = ReplyKeyboardMarkup([
     core.settings.BASIC_BOT_COMMANDS
@@ -61,58 +63,78 @@ def worker_data(update, _):
 
 
 def update_enter_id(update, context):
-    global ID
     update.message.reply_text(
         'Введите ID сотрудника, которого вы хотите изменить.')
-    ID = int(update.message.text.strip())
-    found_employee = core.db.get_user_by_id(ID)
+    id = int(update.message.text.strip())
+    found_employee = core.db.get_user_by_id(id)
     if found_employee is None:
         update.message.reply_text(
             'К сожалению, пользователь не найден. Убедитесь, что вы вводите Корректный идентификатор(число).')
         return ConversationHandler.END
     update.message.reply_text('Пользователь найден!')
-    text_update_col = [x for x in ALL_DB_COLUMNS if x not in ('ID', 'avatar')]
-    reply_keyboard = [['/update ' + x for x in
-                       text_update_col] + ['/update_avatar', ]]
+    text_update_col = [x for x in ALL_DB_COLUMNS if x not in ('ID',)]
+    # reply_keyboard = [['/update ' + x for x in
+    #                    text_update_col] + ['/update_avatar', ]]
+    n = len(text_update_col) // 2
+    reply_keyboard = [
+        [
+            InlineKeyboardButton(f'\t{x}\t', callback_data=f'{id} {x}') for x in text_update_col[:n]
+        ],
+        [
+            InlineKeyboardButton(f'\t{x}\t', callback_data=f'{id} {x}') for x
+            in text_update_col[n:]
+
+        ]
+    ]
 
     employee_card, avatar_detected = employee_card_message(found_employee)
     if avatar_detected:
         update.message.reply_photo(caption=employee_card,
-                                   reply_markup=ReplyKeyboardMarkup(
-                                       reply_keyboard, one_time_keyboard=True))
+                                   reply_markup=InlineKeyboardMarkup(reply_keyboard))
     else:
         update.message.reply_text(employee_card,
-                                  reply_markup=ReplyKeyboardMarkup(
-                                      reply_keyboard, one_time_keyboard=True))
-    return UPDATE_FIELD
+                                  reply_markup=InlineKeyboardMarkup(reply_keyboard))
+    return ConversationHandler.END
 
 
-def update_text_field(update, _):
-    global FIELD_TO_UPDATE
-    FIELD_TO_UPDATE = update.message.text.split()[-1]
-    if FIELD_TO_UPDATE.lower() not in [x.lower() for x in ALL_DB_COLUMNS if x not in ('ID', 'avatar')]:
-        update.message.reply_text('Поле указано неверно',
-                                  reply_markup=default_markup)
-        return ConversationHandler.END
-    update.message.reply_text(f'Вы будете менять поле {FIELD_TO_UPDATE}\n'
-                              f'Введите новое значение этого поля',
-                              reply_markup=default_markup)
+def update_text_field(update, context):
+    query = update.callback_query
 
-    return UPDATE_VAL
+    query.answer()
+    # query.edit_message_text(text=f"Selected option: {query.data}")
+    data = query.data.split()
+    context.bot.send_message(
+        update.effective_chat.id,
+        f'Вы хотите поменять поле {data[1]} у работника с ID {data[0]}\n'
+        f'Введите новое значение или команду /cancel для отмены'
+    )
+    context.user_data['id'] = data[0]
+    context.user_data['field_to_update'] = data[1]
+    # FIELD_TO_UPDATE = update.message.text.split()[-1]
+    # if FIELD_TO_UPDATE.lower() not in [x.lower() for x in ALL_DB_COLUMNS if x not in ('ID', 'avatar')]:
+    #     update.message.reply_text('Поле указано неверно',
+    #                               reply_markup=default_markup)
+    #     return ConversationHandler.END
+    # update.message.reply_text(f'Вы будете менять поле {FIELD_TO_UPDATE}\n'
+    #                           f'Введите новое значение этого поля',
+    #                           reply_markup=default_markup)
+    #
+    return UPDATE_END_VAL
 
 
 def update_avatar(update, context):
-    update.message.reply_text('Прикрепите фото', reply_markup=default_markup)
+    update.message.reply_text('Прикрепите фото И', reply_markup=default_markup)
     return UPDATE_VAL
 
 
-def update_text_field_val(update, _):
-    new_val = update.message.text
-    status = core.db.update_field(ID, {FIELD_TO_UPDATE: new_val})
-    if status == 0:
-        update.message.reply_text('Вы изменили поле!')
-    else:
-        update.message.reply_text('Что-то не так...')
+def update_text_field_val(update, context):
+    update.message.reply_text(f"{context.user_data['id']} {context.user_data['field_to_update']}")
+    # new_val = update.message.text
+    # status = core.db.update_field(ID, {FIELD_TO_UPDATE: new_val})
+    # if status == 0:
+    #     update.message.reply_text('Вы изменили поле!')
+    # else:
+    #     update.message.reply_text('Что-то не так...')
     return ConversationHandler.END
 
 
@@ -138,24 +160,37 @@ def prepare_bot():
         },
         fallbacks=[CommandHandler('cancel', cancel_conv)]
     )
-    update_employee_field = ConversationHandler(
+    update_employee_field_start = ConversationHandler(
         entry_points=[CommandHandler('update_employee', update_employee)],
         states={
             ENTER_ID: [MessageHandler(Filters.text, update_enter_id)],
-            UPDATE_FIELD: [
-                CommandHandler('update', update_text_field),
-                CommandHandler('update_avatar', update_avatar),
-            ],
-            UPDATE_VAL: [
+            # UPDATE_FIELD: [
+            #     CommandHandler('update', update_text_field),
+            #     CommandHandler('update_avatar', update_avatar),
+            # ],
+            # UPDATE_VAL: [
+            #     MessageHandler(Filters.text, update_text_field_val),
+            #     MessageHandler(Filters.text, update_avatar_val),
+            # ]
+
+        },
+        fallbacks=[CommandHandler('cancel', cancel_conv)]
+    )
+    update_employee_field_end = ConversationHandler(
+        entry_points=[CallbackQueryHandler(update_text_field)],
+        states={
+            UPDATE_END_VAL: [
                 MessageHandler(Filters.text, update_text_field_val),
-                MessageHandler(Filters.text, update_avatar_val),
-            ]
+                # CommandHandler(Filters.photo, update_avatar),
+            ],
 
         },
         fallbacks=[CommandHandler('cancel', cancel_conv)]
     )
     updater.dispatcher.add_handler(add_user_conv)
-    updater.dispatcher.add_handler(update_employee_field)
+    # updater.dispatcher.add_handler(CallbackQueryHandler(update_text_field))
+    updater.dispatcher.add_handler(update_employee_field_start)
+    updater.dispatcher.add_handler(update_employee_field_end)
     return updater
 
 
