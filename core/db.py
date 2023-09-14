@@ -74,6 +74,7 @@ def add_employee(*args):
     return id_of_added_employee
     # можно передать словарь например, и в insert (передать *d.keys())
 
+
 @db_decorator
 def get_user_by_id(*args):
     try:
@@ -105,6 +106,8 @@ def update_field(*args):
     con.commit()
 
     return 0
+
+
 @db_decorator
 def find_employer_by_fields(*args):
     ...
