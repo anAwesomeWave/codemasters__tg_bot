@@ -12,7 +12,8 @@ from telegram.ext import (
     ConversationHandler,
     CallbackQueryHandler,
 )
-from telegram import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import ReplyKeyboardMarkup, InlineKeyboardMarkup, \
+    InlineKeyboardButton
 from dotenv import load_dotenv
 
 from core.log_conf import create_logger
@@ -27,7 +28,7 @@ logger = create_logger(__name__, 'bot.log')
 
 WORKER_DATA = range(1)
 ENTER_ID, UPDATE_FIELD, UPDATE_VAL = range(3)
-
+RETURN_FOUND = range(1)
 UPDATE_END_VAL = range(1)
 FIND_ID = range(1)
 NUMBER_OF_REQUIRED_FIELDS = 4
@@ -43,7 +44,8 @@ def worker_data(update, _):
             'Тимофей Зубов Разработчик Телеграмм-бот'
         )
     else:
-        data = {EXPECTED_VALUES[i]: empl_data[i] for i in range(NUMBER_OF_REQUIRED_FIELDS)}
+        data = {EXPECTED_VALUES[i]: empl_data[i] for i in
+                range(NUMBER_OF_REQUIRED_FIELDS)}
         data.update({'time': datetime.now(pytz.utc)})
         employee_id = core.db.add_employee(data)
         try:
@@ -77,10 +79,13 @@ def update_enter_id(update, context):
     n = len(text_update_col) // 2
     reply_keyboard = [
         [
-            InlineKeyboardButton(f'{x}', callback_data=f'{id} {x}') for x in text_update_col[:n]
+            InlineKeyboardButton(f'{x}', callback_data=f'update {id} {x}') for
+            x in
+            text_update_col[:n]
         ],
         [
-            InlineKeyboardButton(f'{x}', callback_data=f'{id} {x}') for x
+            InlineKeyboardButton(f'{x}', callback_data=f'update {id} {x}') for
+            x
             in text_update_col[n:]
 
         ]
@@ -89,9 +94,37 @@ def update_enter_id(update, context):
     employee_card, avatar_detected = employee_card_message(found_employee)
     if avatar_detected:
         photo = BufferedReader(BytesIO(found_employee[-2]))
-        context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo, caption=employee_card)
+        context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo,
+                               caption=employee_card,
+                               reply_markup=InlineKeyboardMarkup(
+                                   reply_keyboard))
     else:
-        update.message.reply_text(employee_card, reply_markup=InlineKeyboardMarkup(reply_keyboard))
+        update.message.reply_text(employee_card,
+                                  reply_markup=InlineKeyboardMarkup(
+                                      reply_keyboard))
+    return ConversationHandler.END
+
+
+def get_find_val(update, context):
+    query = update.callback_query
+
+    query.answer()
+    field = query.data.split()[1:]
+    context.bot.send_message(update.effective_chat.id, f'Отлично! Укажите, кого вы хотите найти.(Вы ищете по {field[0]})')
+
+    context.user_data['search_field'] = field[0]
+
+    return RETURN_FOUND
+
+
+def return_found(update, context):
+    search_val = update.message.text.lower()
+    search_field = context.user_data['search_field']
+    # answer = core.db.find_employer_by_fields
+    # context.bot.send_message(update.effective_chat.id, f'ВСЕ МЫ ТУТ {search_field}: {search_val}')
+    print(search_field, search_val)
+    ans = core.db.find_employer_by_fields(search_field, search_val)
+    print(ans)
     return ConversationHandler.END
 
 
@@ -99,7 +132,7 @@ def update_text_field(update, context):
     query = update.callback_query
 
     query.answer()
-    data = query.data.split()
+    data = query.data.split()[1:]
     send_message(
         context.bot,
         update.effective_chat.id,
@@ -116,7 +149,8 @@ def update_text_field_val(update, context):
     if context.user_data['field_to_update'] == 'avatar':
         update.message.reply_text('в avatar нельзя записать текст')
         return ConversationHandler.END
-    status = core.db.update_field(context.user_data['id'], {context.user_data['field_to_update']: new_val})
+    status = core.db.update_field(context.user_data['id'], {
+        context.user_data['field_to_update']: new_val})
     if status == 0:
         update.message.reply_text('Вы изменили поле!')
     else:
@@ -150,35 +184,51 @@ def prepare_bot():
         raise Exception(
             message
         )
-    updater.dispatcher.add_handler(CommandHandler('start', start_bot))
     add_user_conv = ConversationHandler(
         entry_points=[CommandHandler('add_employee', add_employee)],
         states={
-            WORKER_DATA: [MessageHandler(Filters.text & (~ Filters.command), worker_data)],
+            WORKER_DATA: [MessageHandler(Filters.text & (~ Filters.command),
+                                         worker_data)],
         },
         fallbacks=[CommandHandler('cancel', cancel_conv)]
     )
     find_by_id_conv = ConversationHandler(
         entry_points=[CommandHandler('find_by_id', send_find_by_id)],
         states={
-            FIND_ID: [MessageHandler(Filters.text & (~ Filters.command), send_find_by_id_end)],
+            FIND_ID: [MessageHandler(Filters.text & (~ Filters.command),
+                                     send_find_by_id_end)],
         },
         fallbacks=[CommandHandler('cancel', cancel_conv)]
     )
     update_employee_field_start = ConversationHandler(
         entry_points=[CommandHandler('update_employee', update_employee)],
         states={
-            ENTER_ID: [MessageHandler(Filters.text & (~ Filters.command), update_enter_id)],
+            ENTER_ID: [MessageHandler(Filters.text & (~ Filters.command),
+                                      update_enter_id)],
 
         },
         fallbacks=[CommandHandler('cancel', cancel_conv)]
     )
     update_employee_field_end = ConversationHandler(
-        entry_points=[CallbackQueryHandler(update_text_field)],
+        entry_points=[
+            CallbackQueryHandler(update_text_field, pattern=r"^update")],
         states={
             UPDATE_END_VAL: [
-                MessageHandler(Filters.text & (~ Filters.command), update_text_field_val),
-                MessageHandler(Filters.photo & (~ Filters.command), update_avatar_val),
+                MessageHandler(Filters.text & (~ Filters.command),
+                               update_text_field_val),
+                MessageHandler(Filters.photo & (~ Filters.command),
+                               update_avatar_val),
+            ],
+
+        },
+        fallbacks=[CommandHandler('cancel', cancel_conv)]
+    )
+    find_employee = ConversationHandler(
+        entry_points=[CallbackQueryHandler(get_find_val, pattern=r"^find")],
+        states={
+            RETURN_FOUND: [
+                MessageHandler(Filters.text & (~ Filters.command),
+                               return_found)
             ],
 
         },
@@ -188,6 +238,10 @@ def prepare_bot():
     updater.dispatcher.add_handler(update_employee_field_start)
     updater.dispatcher.add_handler(update_employee_field_end)
     updater.dispatcher.add_handler(find_by_id_conv)
+    updater.dispatcher.add_handler(CommandHandler('start', start_bot))
+    updater.dispatcher.add_handler(
+        CommandHandler('get_employees', get_employees_fields))
+    updater.dispatcher.add_handler(find_employee)
     return updater
 
 
@@ -210,19 +264,23 @@ def add_employee(update, context):
     )
     return WORKER_DATA
 
+
 def send_find_by_id(update, context):
-    update.message.reply_text('Введите ID сотрудника для продеолжения или cancel для отмены')
+    update.message.reply_text(
+        'Введите ID сотрудника для продеолжения или cancel для отмены')
     return FIND_ID
+
 
 def send_find_by_id_end(update, context):
     try:
         id = int(update.message.text)
         found_employee = core.db.get_user_by_id(id)
         if found_employee is not None:
-            card_message=employee_card_message(found_employee)
+            card_message = employee_card_message(found_employee)
             if card_message[1]:
                 photo = BufferedReader(BytesIO(found_employee[-2]))
-                context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo, caption=card_message[0])
+                context.bot.send_photo(chat_id=update.effective_chat.id,
+                                       photo=photo, caption=card_message[0])
             else:
                 update.message.reply_text(card_message[0])
     except ValueError as e:
@@ -231,6 +289,8 @@ def send_find_by_id_end(update, context):
         logger.error(e)
 
     return ConversationHandler.END
+
+
 def update_employee(update, context):
     update.message.reply_text(
         'Обновление данных работника.'
@@ -244,6 +304,11 @@ def cancel_conv(update, context):
     return ConversationHandler.END
 
 
+def send_info(update, contet):
+    # TODO
+    ...
+
+
 def start_bot(update, context):
     chat_id = update.effective_chat.id
     send_message(
@@ -253,6 +318,28 @@ def start_bot(update, context):
         reply_markup=ReplyKeyboardMarkup([
             core.settings.BASIC_BOT_COMMANDS
         ], resize_keyboard=True)
+    )
+
+
+def get_employees_fields(update, context):
+    text_update_col = [x for x in ALL_DB_COLUMNS]
+    n = len(text_update_col) // 2
+    reply_keyboard = [
+        [
+            InlineKeyboardButton(f'{x}', callback_data=f'find {x}') for x in
+            text_update_col[:n]
+        ],
+        [
+            InlineKeyboardButton(f'{x}', callback_data=f'find {x}') for x
+            in text_update_col[n:]
+
+        ]
+    ]
+    update.message.reply_text(
+        'Выберите, по какому полю вы хотите произвести поиск.'
+        '(Помните, эта команда будет выводить список всех работников(буз аватарки, подходящих под описание. '
+        'Чтобы получить более полную информацию о сотруднике, воспользуйтесь командой /find_by_id указав ID сотрудника)',
+        reply_markup=InlineKeyboardMarkup(reply_keyboard)
     )
 
 

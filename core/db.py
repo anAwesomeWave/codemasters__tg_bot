@@ -110,7 +110,16 @@ def update_field(*args):
 
 @db_decorator
 def find_employer_by_fields(*args):
-    ...
+    print('МЫ ЗДКСЬ')
+    try:
+        cur, con, key, val = args
+        query = f"SELECT id, first_name, middle_name, last_name, job_pos, project FROM empls WHERE " + key + " LIKE ? COLLATE NOCASE"
+        cur.execute(query, (val,))
+        ans = cur.fetchall()
+        return ans
+    except ValueError:
+        logger.error(f"Cannot add user, not enough args {args}", exc_info=1)
+        return None
 
 
 if __name__ == '__main__':
