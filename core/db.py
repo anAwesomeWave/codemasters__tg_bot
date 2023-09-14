@@ -43,7 +43,7 @@ def create_db(*args):
 def add_employee(*args):
     """Добавление нового работника в буазу данных.
         (пока условимся, что будут передаваться только те данные, которые необхдимы
-        В случае успеха возвращает 0
+        В случае успеха возвращает id добавленного работника
     """
     try:
         cur, con, data = args
@@ -69,8 +69,9 @@ def add_employee(*args):
         "VALUES(?, ?, ?, ?)",
         values
     )
+    id_of_added_employee = cur.lastrowid
     con.commit()
-    return 0
+    return id_of_added_employee
     # можно передать словарь например, и в insert (передать *d.keys())
 
 @db_decorator
@@ -89,7 +90,7 @@ def get_user_by_id(*args):
 
 
 @db_decorator
-def updated_field(*args):
+def update_field(*args):
     ''' изменение поля
         прнимает id, и field -> {k: updated_val}
     '''
@@ -98,7 +99,10 @@ def updated_field(*args):
     except ValueError:
         logger.error(f"Cannot add user, not enough args {args}", exc_info=1)
         return None
-    cur.execute("UPDATE empls SET ?=?", field.items()[0])
+    updated_item = list(field.items())[0]
+    query = "UPDATE empls SET (" + updated_item[0] + ") =?"
+    cur.execute(query, (updated_item[1],))
+    con.commit()
 
     return 0
 @db_decorator

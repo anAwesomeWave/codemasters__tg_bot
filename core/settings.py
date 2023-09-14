@@ -8,4 +8,6 @@ ALL_DB_COLUMNS = (
     'middle_name', 'last_name',
     'job_pos', 'project',
     'avatar', 'time'
+
 )
+BASIC_BOT_COMMANDS = ('/start', '/add_employee', '/update_employee')
