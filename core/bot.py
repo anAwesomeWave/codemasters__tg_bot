@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from io import BytesIO
+from io import BytesIO, BufferedReader
 
 import pytz
 
@@ -219,8 +219,9 @@ def send_find_by_id_end(update, context):
         found_employee = core.db.get_user_by_id(id)
         if found_employee is not None:
             card_message=employee_card_message(found_employee)
-            if card_message[1] == True:
-                ...
+            if card_message[1]:
+                photo = BufferedReader(BytesIO(found_employee[-2]))
+                context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo, caption=card_message[0])
             else:
                 update.message.reply_text(card_message[0])
     except ValueError as e:

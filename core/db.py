@@ -62,8 +62,6 @@ def add_employee(*args):
         return None
     arg_names = list(data.keys())
     values = [data[x] for x in arg_names]
-    print(*arg_names)
-    print(values)
     cur.execute(
         "INSERT INTO empls(first_name, last_name, job_pos, project, time) "
         "VALUES(?, ?, ?, ?, ?)",
