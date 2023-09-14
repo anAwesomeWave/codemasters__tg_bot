@@ -65,8 +65,8 @@ def add_employee(*args):
     print(*arg_names)
     print(values)
     cur.execute(
-        "INSERT INTO empls(first_name, last_name, job_pos, project) "
-        "VALUES(?, ?, ?, ?)",
+        "INSERT INTO empls(first_name, last_name, job_pos, project, time) "
+        "VALUES(?, ?, ?, ?, ?)",
         values
     )
     id_of_added_employee = cur.lastrowid

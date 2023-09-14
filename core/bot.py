@@ -1,4 +1,6 @@
 import os
+from datetime import datetime
+import pytz
 
 from telegram.ext import (
     Updater,
@@ -28,10 +30,6 @@ UPDATE_END_VAL = range(1)
 FIND_ID = range(1)
 NUMBER_OF_REQUIRED_FIELDS = 4
 
-default_markup = ReplyKeyboardMarkup([
-    core.settings.BASIC_BOT_COMMANDS
-], resize_keyboard=True)
-
 
 def worker_data(update, _):
     empl_data = update.message.text.split()
@@ -43,21 +41,18 @@ def worker_data(update, _):
             'Тимофей Зубов Разработчик Телеграмм-бот'
         )
     else:
-        employee_id = core.db.add_employee(
-                {
-                    EXPECTED_VALUES[i]: empl_data[i]
-                    for i in range(NUMBER_OF_REQUIRED_FIELDS)
-                }
-        )
-        if employee_id is None:
+        data = {EXPECTED_VALUES[i]: empl_data[i] for i in range(NUMBER_OF_REQUIRED_FIELDS)}
+        data.update({'time': datetime.now(pytz.utc)})
+        employee_id = core.db.add_employee(data)
+        try:
+            update.message.reply_text(
+                f'Отлично! Сотрудник был добавлен! Eго ID - {employee_id}'
+            )
+        except TypeError as e:
             update.message.reply_text(
                 'Что-то пошло не так'
             )
             logger.error('НЕ ЗАПИСАЛИ СОТРУДНИКА! СМОТЕРТЬ ЛОГГЕР БД')
-            return ConversationHandler.END
-        update.message.reply_text(
-            f'Отлично! Сотрудник был добавлен! Eго ID - {employee_id}'
-        )
     return ConversationHandler.END
 
 
@@ -91,11 +86,9 @@ def update_enter_id(update, context):
 
     employee_card, avatar_detected = employee_card_message(found_employee)
     if avatar_detected:
-        update.message.reply_photo(caption=employee_card,
-                                   reply_markup=InlineKeyboardMarkup(reply_keyboard))
+        update.message.reply_photo(caption=employee_card)
     else:
-        update.message.reply_text(employee_card,
-                                  reply_markup=InlineKeyboardMarkup(reply_keyboard))
+        update.message.reply_text(employee_card)
     return ConversationHandler.END
 
 
@@ -116,7 +109,7 @@ def update_text_field(update, context):
 
 
 def update_avatar(update, context):
-    update.message.reply_text('Прикрепите фото И', reply_markup=default_markup)
+    update.message.reply_text('Прикрепите фото Или введите /cancel для отмены')
     return UPDATE_VAL
 
 
@@ -212,7 +205,11 @@ def send_find_by_id_end(update, context):
         id = int(update.message.text)
         found_employee = core.db.get_user_by_id(id)
         if found_employee is not None:
-            update.message.reply_text(found_employee)
+            card_message=employee_card_message(found_employee)
+            if card_message[1] == True:
+                ...
+            else:
+                update.message.reply_text(card_message[0])
     except ValueError as e:
         update.message.reply_text("Введите число")
     except Exception as e:
@@ -228,7 +225,7 @@ def update_employee(update, context):
 
 
 def cancel_conv(update, context):
-    update.message.reply_text('ОТМЕНА', reply_markup=default_markup)
+    update.message.reply_text('ОТМЕНА')
     return ConversationHandler.END
 
 
@@ -238,7 +235,9 @@ def start_bot(update, context):
         context.bot,
         chat_id,
         'Бот успешно стартовал',
-        reply_markup=default_markup
+        reply_markup=ReplyKeyboardMarkup([
+            core.settings.BASIC_BOT_COMMANDS
+        ], resize_keyboard=True)
     )
 
 
