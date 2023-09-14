@@ -1,5 +1,7 @@
 import os
 from datetime import datetime
+from io import BytesIO
+
 import pytz
 
 from telegram.ext import (
@@ -75,10 +77,10 @@ def update_enter_id(update, context):
     n = len(text_update_col) // 2
     reply_keyboard = [
         [
-            InlineKeyboardButton(f'\t{x}\t', callback_data=f'{id} {x}') for x in text_update_col[:n]
+            InlineKeyboardButton(f'{x}', callback_data=f'{id} {x}') for x in text_update_col[:n]
         ],
         [
-            InlineKeyboardButton(f'\t{x}\t', callback_data=f'{id} {x}') for x
+            InlineKeyboardButton(f'{x}', callback_data=f'{id} {x}') for x
             in text_update_col[n:]
 
         ]
@@ -86,9 +88,9 @@ def update_enter_id(update, context):
 
     employee_card, avatar_detected = employee_card_message(found_employee)
     if avatar_detected:
-        update.message.reply_photo(caption=employee_card)
+        update.message.reply_photo(caption=employee_card, reply_markup=InlineKeyboardMarkup(reply_keyboard))
     else:
-        update.message.reply_text(employee_card)
+        update.message.reply_text(employee_card, reply_markup=InlineKeyboardMarkup(reply_keyboard))
     return ConversationHandler.END
 
 
@@ -108,13 +110,11 @@ def update_text_field(update, context):
     return UPDATE_END_VAL
 
 
-def update_avatar(update, context):
-    update.message.reply_text('Прикрепите фото Или введите /cancel для отмены')
-    return UPDATE_VAL
-
-
 def update_text_field_val(update, context):
     new_val = update.message.text
+    if context.user_data['field_to_update'] == 'avatar':
+        update.message.reply_text('в avatar нельзя записать текст')
+        return ConversationHandler.END
     status = core.db.update_field(context.user_data['id'], {context.user_data['field_to_update']: new_val})
     if status == 0:
         update.message.reply_text('Вы изменили поле!')
@@ -123,7 +123,19 @@ def update_text_field_val(update, context):
     return ConversationHandler.END
 
 
-def update_avatar_val(update, _):
+def update_avatar_val(update, context):
+    if context.user_data['field_to_update'] != 'avatar':
+        update.message.reply_text('фото можно добавить только в поле avatar.')
+        return ConversationHandler.END
+    update.message.reply_text('ВСЕ ОК')
+    file = context.bot.get_file(update.message.photo[-1].file_id)
+    f = BytesIO(file.download_as_bytearray()).getbuffer().tobytes()
+    ans = core.db.update_field(context.user_data['id'], {'avatar': f})
+    if ans == 0:
+        update.message.reply_text('ВСЕ ОК')
+    else:
+        update.message.reply_text('Не добавили')
+
     return ConversationHandler.END
 
 
@@ -165,6 +177,7 @@ def prepare_bot():
         states={
             UPDATE_END_VAL: [
                 MessageHandler(Filters.text & (~ Filters.command), update_text_field_val),
+                MessageHandler(Filters.photo & (~ Filters.command), update_avatar_val),
             ],
 
         },

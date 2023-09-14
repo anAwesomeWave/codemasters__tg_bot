@@ -100,9 +100,11 @@ def update_field(*args):
     except ValueError:
         logger.error(f"Cannot add user, not enough args {args}", exc_info=1)
         return None
-    updated_item = list(field.items())[0]
-    query = "UPDATE empls SET (" + updated_item[0] + ") =?"
-    cur.execute(query, (updated_item[1],))
+    updated_item = list(list(field.items())[0])
+    if updated_item[0] == 'avatar':
+        updated_item[1] = sqlite3.Binary(updated_item[1])
+    query = "UPDATE empls SET (" + updated_item[0] + ") =? WHERE ID=?"
+    cur.execute(query, (updated_item[1],emp_id))
     con.commit()
 
     return 0
