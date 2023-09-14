@@ -10,4 +10,7 @@ ALL_DB_COLUMNS = (
     'avatar', 'time'
 
 )
-BASIC_BOT_COMMANDS = ('/start', '/add_employee', '/update_employee', '/find_by_id', '/get_employees', '/info')
+BASIC_BOT_COMMANDS = (
+    '/start', '/add_employee', '/update_employee', '/find_by_id',
+    '/get_employees',
+    '/info')

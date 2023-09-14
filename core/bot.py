@@ -70,12 +70,12 @@ def update_enter_id(update, context):
     found_employee = core.db.get_user_by_id(id)
     if found_employee is None:
         update.message.reply_text(
-            'К сожалению, пользователь не найден. Убедитесь, что вы вводите Корректный идентификатор(число).')
+            'К сожалению, пользователь не найден. Убедитесь, что вы вводите '
+            'Корректный идентификатор(число).'
+        )
         return ConversationHandler.END
     update.message.reply_text('Пользователь найден!')
     text_update_col = [x for x in ALL_DB_COLUMNS if x not in ('ID',)]
-    # reply_keyboard = [['/update ' + x for x in
-    #                    text_update_col] + ['/update_avatar', ]]
     n = len(text_update_col) // 2
     reply_keyboard = [
         [
@@ -110,7 +110,10 @@ def get_find_val(update, context):
 
     query.answer()
     field = query.data.split()[1:]
-    context.bot.send_message(update.effective_chat.id, f'Отлично! Укажите, кого вы хотите найти.(Вы ищете по {field[0]})')
+    context.bot.send_message(
+        update.effective_chat.id,
+        f'Отлично! Укажите, кого вы хотите найти.(Вы ищете по {field[0]})'
+    )
 
     context.user_data['search_field'] = field[0]
 
@@ -120,8 +123,6 @@ def get_find_val(update, context):
 def return_found(update, context):
     search_val = update.message.text.lower()
     search_field = context.user_data['search_field']
-    # answer = core.db.find_employer_by_fields
-    # context.bot.send_message(update.effective_chat.id, f'ВСЕ МЫ ТУТ {search_field}: {search_val}')
     ans = core.db.find_employer_by_fields(search_field, search_val)
     update.message.reply_text(form_list_message(ans))
     return ConversationHandler.END
@@ -179,7 +180,9 @@ def prepare_bot():
         logger.debug("Initialized bot successfully.")
     except ValueError:
         message = (
-            'Cannot initialize bot.\nCreate ".env" in a root dir and provide your "API_KEY"')
+            'Cannot initialize bot.\nCreate ".env" in a root dir and '
+            'provide your "API_KEY"'
+        )
         raise Exception(
             message
         )
@@ -259,15 +262,18 @@ def send_message(bot, chat_id, message, **kwargs):
 def add_employee(update, context):
     update.message.reply_text(
         'Добавление работника.'
-        'Введите данные сотрудника через пробел( его имя, фамилию, занимаеую им должность и проект, над которым он работает).'
-        'Остальные данные вы сможете ввести позже. Также вы моежете ввести /cancel для отмены'
+        'Введите данные сотрудника через пробел( его имя, фамилию, '
+        'занимаеую им должность и проект, над которым он работает).'
+        'Остальные данные вы сможете ввести позже. Также вы моежете '
+        'ввести /cancel для отмены'
     )
     return WORKER_DATA
 
 
 def send_find_by_id(update, context):
     update.message.reply_text(
-        'Введите ID сотрудника для продеолжения или cancel для отмены')
+        'Введите ID сотрудника для продеолжения или cancel для отмены.'
+    )
     return FIND_ID
 
 
@@ -304,13 +310,20 @@ def cancel_conv(update, context):
     return ConversationHandler.END
 
 
-def send_info(update, contet):
+def send_info(update, context):
     update.message.reply_text(
         '''Этот бот обладает следующими командами:
-        /start - Активировать бота
-        /info - прислать информацию о боте (это сообщение)
-        ...
-        ''')
+• /start - Активировать бота
+• /info - прислать информацию о боте (это сообщение)
+• /add_employee - Добавить нового сотрудника в базу данных.
+• /update_employee - Обновить или Добавить информацию о сотруднике.
+• /get_employees - Вернуть список сотрудников, подходящих под критерий
+(Вам в любом случае вернется список, Чтобы получить полную информацию о 
+сотруднике, воспользуйтесь функцией find_by_id)
+• /find_by_id - Получить полную информацию о сотруднике
+(Вам понадобиться ID сотрудника, который вы можете узнать, в том числе, 
+воспользовавшись командой get_employees)
+''')
 
 
 def start_bot(update, context):
@@ -342,8 +355,10 @@ def get_employees_fields(update, context):
     ]
     update.message.reply_text(
         'Выберите, по какому полю вы хотите произвести поиск.'
-        '(Помните, эта команда будет выводить список всех работников(буз аватарки, подходящих под описание. '
-        'Чтобы получить более полную информацию о сотруднике, воспользуйтесь командой /find_by_id указав ID сотрудника)',
+        '(Помните, эта команда будет выводить список всех работников '
+        '(без аватарки, подходящих под описание. '
+        'Чтобы получить более полную информацию о сотруднике, '
+        'воспользуйтесь командой /find_by_id указав ID сотрудника)',
         reply_markup=InlineKeyboardMarkup(reply_keyboard)
     )
 

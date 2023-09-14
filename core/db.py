@@ -42,7 +42,8 @@ def create_db(*args):
 @db_decorator
 def add_employee(*args):
     """Добавление нового работника в буазу данных.
-        (пока условимся, что будут передаваться только те данные, которые необхдимы
+        (пока условимся, что будут передаваться только те данные,
+        которые необхдимы
         В случае успеха возвращает id добавленного работника
     """
     try:
@@ -110,10 +111,10 @@ def update_field(*args):
 
 @db_decorator
 def find_employer_by_fields(*args):
-    print('МЫ ЗДКСЬ')
     try:
         cur, con, key, val = args
-        query = f"SELECT id, first_name, middle_name, last_name, job_pos, project FROM empls WHERE " + key + " LIKE ? COLLATE NOCASE"
+        query = (f"SELECT id, first_name, middle_name, last_name, job_pos, "
+                f"project FROM empls WHERE " + key + " LIKE ? COLLATE NOCASE")
         cur.execute(query, (val,))
         ans = cur.fetchall()
         return ans
@@ -123,7 +124,4 @@ def find_employer_by_fields(*args):
 
 
 if __name__ == '__main__':
-    # create_db()
-    # add_employee({'first_name': 'tOm', 'last_name': 'Zubov', 'job_pos': 'BOSS',
-    #               'project': 'kaif'})
     print(get_user_by_id(1))
