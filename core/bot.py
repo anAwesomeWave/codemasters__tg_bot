@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 from core.log_conf import create_logger
 import core.db
 from core.settings import EXPECTED_VALUES, ALL_DB_COLUMNS
-from core.utils import employee_card_message
+from core.utils import employee_card_message, form_list_message
 
 load_dotenv()
 logger = create_logger(__name__, 'bot.log')
@@ -122,9 +122,8 @@ def return_found(update, context):
     search_field = context.user_data['search_field']
     # answer = core.db.find_employer_by_fields
     # context.bot.send_message(update.effective_chat.id, f'ВСЕ МЫ ТУТ {search_field}: {search_val}')
-    print(search_field, search_val)
     ans = core.db.find_employer_by_fields(search_field, search_val)
-    print(ans)
+    update.message.reply_text(form_list_message(ans))
     return ConversationHandler.END
 
 
@@ -239,6 +238,7 @@ def prepare_bot():
     updater.dispatcher.add_handler(update_employee_field_end)
     updater.dispatcher.add_handler(find_by_id_conv)
     updater.dispatcher.add_handler(CommandHandler('start', start_bot))
+    updater.dispatcher.add_handler(CommandHandler('info', send_info))
     updater.dispatcher.add_handler(
         CommandHandler('get_employees', get_employees_fields))
     updater.dispatcher.add_handler(find_employee)
@@ -305,8 +305,12 @@ def cancel_conv(update, context):
 
 
 def send_info(update, contet):
-    # TODO
-    ...
+    update.message.reply_text(
+        '''Этот бот обладает следующими командами:
+        /start - Активировать бота
+        /info - прислать информацию о боте (это сообщение)
+        ...
+        ''')
 
 
 def start_bot(update, context):
@@ -316,7 +320,8 @@ def start_bot(update, context):
         chat_id,
         'Бот успешно стартовал',
         reply_markup=ReplyKeyboardMarkup([
-            core.settings.BASIC_BOT_COMMANDS
+            core.settings.BASIC_BOT_COMMANDS[:3],
+            core.settings.BASIC_BOT_COMMANDS[3:]
         ], resize_keyboard=True)
     )
 
